@@ -11,6 +11,8 @@ import { exportCommand } from './commands/export.js'
 import { enableCommand } from './commands/enable.js'
 import { importCommand } from './commands/import.js'
 import { installCommand } from './commands/install.js'
+import { checkCommand } from './commands/check.js'
+import { linkCommand } from './commands/link.js'
 import { syncCommand } from './commands/sync.js'
 
 const program = new Command()
@@ -129,9 +131,30 @@ program
   })
 
 program
+  .command('check')
+  .description('检查冲突：重复技能、MCP 冲突、配置漂移、Hermes 兼容性')
+  .action(() => {
+    const storage = new RegistryStorage()
+    checkCommand(storage)
+    storage.close()
+  })
+
+program
+  .command('link')
+  .description('用 symlink 共享技能目录（单真相源，多 Agent 指向同一份）')
+  .argument('<source-agent>', '源 Agent: opencode|claude|cursor|codex|windsurf')
+  .option('-t, --target <agents>', '目标 Agent (逗号分隔)，默认全部')
+  .option('--force', '覆盖冲突的真实目录')
+  .option('--dry-run', '预览')
+  .action((source, opts) => {
+    linkCommand(source, opts)
+  })
+
+program
   .command('sync')
   .description('同步配置到多 Agent (OpenCode/Claude/Cursor/Codex/Windsurf)')
   .option('--agent <agents>', `目标 Agent (逗号分隔): opencode,claude,cursor,codex,windsurf`, 'opencode')
+  .option('--link', '同步时用 symlink 共享技能文件（不用拷贝）')
   .action((opts) => {
     const storage = new RegistryStorage()
     syncCommand(storage, opts)
