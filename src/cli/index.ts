@@ -10,6 +10,7 @@ import { statsCommand } from './commands/stats.js'
 import { exportCommand } from './commands/export.js'
 import { enableCommand } from './commands/enable.js'
 import { importCommand } from './commands/import.js'
+import { installCommand } from './commands/install.js'
 import { syncCommand } from './commands/sync.js'
 
 const program = new Command()
@@ -91,6 +92,16 @@ program
     const storage = new RegistryStorage()
     await importCommand(storage, source, opts)
     storage.close()
+  })
+
+program
+  .command('install')
+  .description('从导出包一键安装到本机（技能+MCP+配置）')
+  .argument('<source>', '导出目录路径')
+  .option('--prefix <path>', '安装到自定义目录（默认 ~/.config/opencode）')
+  .option('--dry-run', '预览安装内容，不做实际写入')
+  .action(async (source, opts) => {
+    await installCommand(source, opts)
   })
 
 program
