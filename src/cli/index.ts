@@ -95,10 +95,10 @@ program
 
 program
   .command('export')
-  .description('导出注册数据')
-  .option('-o, --output <path>', '输出路径', './registry-export.json')
+  .description('导出注册数据（含源文件，按分类组织）')
+  .option('-o, --output <path>', '输出路径', './registry-export')
   .option('-t, --types <types>', '导出类型 (逗号分隔): skill,mcp,command,agent', 'skill,mcp,command,agent')
-  .option('-f, --format <format>', '导出格式: json|zip', 'json')
+  .option('-f, --format <format>', '导出格式: dir|zip|json', 'dir')
   .action(async (opts) => {
     const storage = new RegistryStorage()
     await exportCommand(storage, opts)
