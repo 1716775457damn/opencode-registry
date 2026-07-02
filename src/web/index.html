@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OpenCode Registry</title>
+<script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg: #0a0e17;
+  --surface: rgba(18, 26, 40, 0.85);
+  --surface-hover: rgba(30, 42, 64, 0.9);
+  --border: rgba(99, 140, 255, 0.12);
+  --text: #d6e0f5;
+  --text-dim: #7a8ba8;
+  --accent: #5b8cff;
+  --accent-glow: rgba(91, 140, 255, 0.25);
+  --green: #34d399;
+  --red: #f87171;
+  --orange: #fbbf24;
+  --radius: 12px;
+  --shadow: 0 4px 24px rgba(0,0,0,0.3);
+}
+html { font-size: 14px; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+body::before {
+  content: ''; position: fixed; inset: 0;
+  background: radial-gradient(ellipse 80% 60% at 20% 10%, rgba(91,140,255,0.06) 0%, transparent 60%),
+              radial-gradient(ellipse 60% 50% at 80% 90%, rgba(52,211,153,0.04) 0%, transparent 50%);
+  pointer-events: none; z-index: 0;
+}
+.app { position: relative; z-index: 1; max-width: 1400px; margin: 0 auto; padding: 24px; }
+
+/* Header */
+.header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 20px 28px; margin-bottom: 28px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); backdrop-filter: blur(12px);
+}
+.header h1 { font-size: 1.5rem; font-weight: 700; display: flex; align-items: center; gap: 10px; }
+.header h1 span { background: linear-gradient(135deg, #5b8cff, #34d399); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+.header .subtitle { color: var(--text-dim); font-size: 0.85rem; }
+.header .badge {
+  background: var(--accent-glow); color: var(--accent); padding: 4px 12px;
+  border-radius: 20px; font-size: 0.75rem; font-weight: 600;
+}
+
+/* Stats Grid */
+.stats {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 28px;
+}
+.stat-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 20px 24px;
+  backdrop-filter: blur(12px); transition: transform 0.2s, box-shadow 0.2s;
+  cursor: pointer;
+}
+.stat-card:hover { transform: translateY(-2px); box-shadow: var(--shadow); }
+.stat-card .stat-value { font-size: 2rem; font-weight: 700; }
+.stat-card .stat-label { color: var(--text-dim); font-size: 0.85rem; margin-top: 4px; }
+.stat-card .stat-sub { color: var(--text-dim); font-size: 0.75rem; margin-top: 2px; }
+.stat-card .stat-icon { font-size: 1.5rem; margin-bottom: 8px; }
+
+/* Tabs */
+.tabs {
+  display: flex; gap: 2px; margin-bottom: 0;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius) var(--radius) 0 0; padding: 4px;
+  backdrop-filter: blur(12px);
+}
+.tab {
+  padding: 10px 20px; cursor: pointer; border-radius: 8px;
+  font-size: 0.85rem; font-weight: 500; color: var(--text-dim);
+  transition: all 0.2s; border: none; background: none;
+}
+.tab:hover { color: var(--text); background: rgba(255,255,255,0.04); }
+.tab.active { color: var(--accent); background: var(--accent-glow); }
+.tab .count {
+  display: inline-block; margin-left: 6px; padding: 1px 7px;
+  border-radius: 10px; font-size: 0.7rem; background: rgba(255,255,255,0.06);
+}
+
+/* Panel */
+.panel {
+  background: var(--surface); border: 1px solid var(--border);
+  border-top: none; border-radius: 0 0 var(--radius) var(--radius);
+  padding: 24px; backdrop-filter: blur(12px);
+  min-height: 400px;
+}
+
+/* Search bar */
+.search-bar {
+  display: flex; gap: 12px; margin-bottom: 20px;
+}
+.search-bar input {
+  flex: 1; padding: 10px 16px; background: rgba(255,255,255,0.06);
+  border: 1px solid var(--border); border-radius: 8px;
+  color: var(--text); font-size: 0.9rem; outline: none;
+  transition: border-color 0.2s;
+}
+.search-bar input:focus { border-color: var(--accent); }
+.search-bar input::placeholder { color: var(--text-dim); }
+.search-bar select {
+  padding: 10px 12px; background: rgba(255,255,255,0.06);
+  border: 1px solid var(--border); border-radius: 8px;
+  color: var(--text); font-size: 0.85rem; outline: none; cursor: pointer;
+}
+
+/* Overview grid */
+.overview-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.chart-card {
+  background: rgba(255,255,255,0.03); border: 1px solid var(--border);
+  border-radius: 10px; padding: 16px;
+}
+.chart-card h3 { font-size: 0.9rem; font-weight: 600; margin-bottom: 12px; color: var(--text-dim); }
+.chart-card canvas { max-height: 220px; max-width: 100%; }
+.recent-list { margin-top: 8px; }
+.recent-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 10px; border-radius: 6px; cursor: pointer;
+  transition: background 0.15s;
+}
+.recent-item:hover { background: rgba(255,255,255,0.04); }
+.recent-item .ri-name { font-weight: 500; }
+.recent-item .ri-type {
+  font-size: 0.7rem; padding: 2px 6px; border-radius: 4px;
+  background: var(--accent-glow); color: var(--accent);
+}
+.recent-item .ri-desc { color: var(--text-dim); font-size: 0.8rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Category tree */
+.cat-section { margin-bottom: 20px; }
+.cat-header {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 12px; cursor: pointer; border-radius: 8px;
+  transition: background 0.15s; user-select: none;
+}
+.cat-header:hover { background: rgba(255,255,255,0.04); }
+.cat-header .arrow { transition: transform 0.2s; font-size: 0.7rem; color: var(--text-dim); }
+.cat-header .arrow.open { transform: rotate(90deg); }
+.cat-header .cat-name { font-weight: 600; font-size: 0.9rem; }
+.cat-header .cat-count { color: var(--text-dim); font-size: 0.8rem; margin-left: auto; }
+.cat-items { margin-left: 24px; }
+.skill-row, .mcp-row, .cmd-row, .agent-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 6px 10px; border-radius: 6px; cursor: pointer;
+  transition: background 0.15s; font-size: 0.85rem;
+}
+.skill-row:hover, .mcp-row:hover, .cmd-row:hover, .agent-row:hover { background: rgba(255,255,255,0.04); }
+.status-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.status-dot.on { background: var(--green); }
+.status-dot.off { background: var(--red); }
+.item-name { font-weight: 500; }
+.item-meta { color: var(--text-dim); font-size: 0.8rem; margin-left: auto; }
+.item-desc { color: var(--text-dim); font-size: 0.78rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 400px; }
+
+/* MCP Group Grid */
+.mcp-group-section { margin-bottom: 20px; }
+.mcp-group-header {
+  font-weight: 600; font-size: 0.9rem; padding: 8px 12px;
+  color: var(--accent); border-bottom: 1px solid var(--border); margin-bottom: 8px;
+}
+
+/* Agent cards */
+.agent-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 12px; }
+.agent-card {
+  background: rgba(255,255,255,0.03); border: 1px solid var(--border);
+  border-radius: 10px; padding: 16px; cursor: pointer;
+  transition: all 0.2s;
+}
+.agent-card:hover { border-color: var(--accent); background: rgba(255,255,255,0.05); }
+.agent-card .ac-name { font-weight: 600; font-size: 0.95rem; }
+.agent-card .ac-desc { color: var(--text-dim); font-size: 0.8rem; margin-top: 4px; }
+.agent-card .ac-tags { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+.agent-card .ac-tag {
+  font-size: 0.7rem; padding: 2px 8px; border-radius: 4px;
+  background: var(--accent-glow); color: var(--accent);
+}
+
+/* Modal */
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.6);
+  backdrop-filter: blur(4px); display: flex; align-items: center;
+  justify-content: center; z-index: 100;
+}
+.modal {
+  background: #111b2e; border: 1px solid var(--border);
+  border-radius: 16px; width: 90%; max-width: 640px;
+  max-height: 80vh; overflow-y: auto; box-shadow: 0 24px 64px rgba(0,0,0,0.5);
+}
+.modal-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 20px 24px; border-bottom: 1px solid var(--border);
+}
+.modal-header h2 { font-size: 1.1rem; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+.modal-close {
+  background: none; border: none; color: var(--text-dim); font-size: 1.2rem;
+  cursor: pointer; padding: 4px 8px; border-radius: 4px;
+}
+.modal-close:hover { background: rgba(255,255,255,0.06); color: var(--text); }
+.modal-body { padding: 24px; }
+.detail-row {
+  display: flex; padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+.detail-label { width: 140px; color: var(--text-dim); flex-shrink: 0; font-size: 0.85rem; }
+.detail-value { flex: 1; font-size: 0.85rem; word-break: break-all; }
+.tag-badge {
+  display: inline-block; padding: 2px 8px; border-radius: 4px;
+  background: var(--accent-glow); color: var(--accent); font-size: 0.75rem; margin: 1px;
+}
+
+.loading { text-align: center; padding: 60px; color: var(--text-dim); }
+.loading .spinner {
+  display: inline-block; width: 32px; height: 32px;
+  border: 2px solid var(--border); border-top-color: var(--accent);
+  border-radius: 50%; animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+@media (max-width: 900px) {
+  .stats { grid-template-columns: repeat(2, 1fr); }
+  .overview-grid { grid-template-columns: 1fr; }
+  .app { padding: 12px; }
+}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <header class="header">
+    <div>
+      <h1>⬡ <span>Registry</span></h1>
+      <div class="subtitle">OpenCode 技能 & MCP 管理中心</div>
+    </div>
+    <div class="badge">v0.1</div>
+  </header>
+
+  <div class="stats">
+    <div class="stat-card" @click="activeTab='skills'" :style="statStyle(0)">
+      <div class="stat-icon">📦</div>
+      <div class="stat-value">{{ stats.skills?.total || 0 }}</div>
+      <div class="stat-label">Skills</div>
+      <div class="stat-sub">{{ Object.keys(stats.skills?.categories || {}).length }} 个分类</div>
+    </div>
+    <div class="stat-card" @click="activeTab='mcp'" :style="statStyle(1)">
+      <div class="stat-icon">🔌</div>
+      <div class="stat-value">{{ stats.mcpServers?.total || 0 }}</div>
+      <div class="stat-label">MCP Servers</div>
+      <div class="stat-sub">{{ Object.keys(stats.mcpServers?.groups || {}).length }} 个分组</div>
+    </div>
+    <div class="stat-card" @click="activeTab='commands'" :style="statStyle(2)">
+      <div class="stat-icon">⚡</div>
+      <div class="stat-value">{{ stats.commands?.total || 0 }}</div>
+      <div class="stat-label">Commands</div>
+      <div class="stat-sub">{{ stats.commands?.enabled || 0 }} 已启用</div>
+    </div>
+    <div class="stat-card" @click="activeTab='agents'" :style="statStyle(3)">
+      <div class="stat-icon">🤖</div>
+      <div class="stat-value">{{ stats.agents?.total || 0 }}</div>
+      <div class="stat-label">Agents</div>
+      <div class="stat-sub">{{ stats.agents?.enabled || 0 }} 已启用</div>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <button v-for="t in tabs" :key="t.key" class="tab" :class="{active: activeTab===t.key}"
+      @click="activeTab=t.key">{{ t.label }} <span class="count">{{ t.count }}</span></button>
+  </div>
+
+  <!-- Overview -->
+  <div class="panel" v-if="activeTab==='overview'">
+    <div class="search-bar">
+      <input v-model="searchQuery" @input="doSearch" placeholder="搜索技能、MCP、命令..." />
+      <select v-model="searchKind">
+        <option value="">全部类型</option>
+        <option value="skill">📦 Skill</option>
+        <option value="mcp">🔌 MCP</option>
+        <option value="command">⚡ Command</option>
+        <option value="agent">🤖 Agent</option>
+      </select>
+    </div>
+    <div class="overview-grid">
+      <div class="chart-card">
+        <h3>Skills 分类分布</h3>
+        <canvas ref="skillChart"></canvas>
+      </div>
+      <div class="chart-card">
+        <h3>MCP 分组分布</h3>
+        <canvas ref="mcpChart"></canvas>
+      </div>
+      <div class="chart-card" style="grid-column: 1/-1;">
+        <h3>最近搜索</h3>
+        <div v-if="searchResults.length" class="recent-list">
+          <div v-for="r in searchResults" :key="r.kind+':'+r.name" class="recent-item" @click="showDetail(r)">
+            <span class="ri-type">{{ r.kind }}</span>
+            <span class="ri-name">{{ r.name }}</span>
+            <span class="ri-desc">{{ r.description?.slice(0, 80) }}</span>
+          </div>
+        </div>
+        <div v-else style="color:var(--text-dim);padding:12px;text-align:center;">
+          输入关键词开始搜索
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Skills -->
+  <div class="panel" v-if="activeTab==='skills'">
+    <div class="search-bar">
+      <input v-model="skillFilter" placeholder="过滤技能名称..." />
+    </div>
+    <div v-for="(items, cat) in groupedSkills" :key="cat" class="cat-section">
+      <div class="cat-header" @click="toggleCat(cat)">
+        <span class="arrow" :class="{open: openCats[cat]}">▶</span>
+        <span class="cat-name">{{ cat }}</span>
+        <span class="cat-count">{{ items.length }} 个</span>
+      </div>
+      <div v-if="openCats[cat]" class="cat-items">
+        <div v-for="s in items" :key="s.name" class="skill-row" @click="showDetail(s)">
+          <span class="status-dot" :class="s.enabled?'on':'off'"></span>
+          <span class="item-name">{{ s.name }}</span>
+          <span class="item-meta">{{ s.scope }} · {{ (s.fileSize / 1024).toFixed(1) }}KB</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MCP -->
+  <div class="panel" v-if="activeTab==='mcp'">
+    <div class="search-bar">
+      <input v-model="mcpFilter" placeholder="过滤 MCP 名称..." />
+    </div>
+    <div v-for="(items, group) in groupedMcp" :key="group" class="mcp-group-section">
+      <div class="mcp-group-header">{{ group }} ({{ items.length }})</div>
+      <div v-for="m in items" :key="m.name" class="mcp-row" @click="showDetail(m)">
+        <span class="status-dot" :class="m.enabled?'on':'off'"></span>
+        <span class="item-name">{{ m.name }}</span>
+        <span class="item-desc">{{ m.command?.split('/').pop() || '' }}</span>
+        <span class="item-meta">{{ m.source }}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Commands -->
+  <div class="panel" v-if="activeTab==='commands'">
+    <div class="search-bar">
+      <input v-model="cmdFilter" placeholder="过滤命令名称..." />
+    </div>
+    <div v-for="c in filteredCommands" :key="c.name" class="cmd-row" @click="showDetail(c)">
+      <span class="status-dot" :class="c.enabled?'on':'off'"></span>
+      <span class="item-name">/{{ c.name }}</span>
+      <span class="item-desc">{{ c.description?.slice(0, 80) }}</span>
+      <span class="item-meta">{{ c.scope }}</span>
+    </div>
+  </div>
+
+  <!-- Agents -->
+  <div class="panel" v-if="activeTab==='agents'">
+    <div class="agent-grid">
+      <div v-for="a in agents" :key="a.name" class="agent-card" @click="showDetail(a)">
+        <div class="ac-name">{{ a.name }}</div>
+        <div class="ac-desc">{{ a.description?.slice(0, 120) }}</div>
+        <div class="ac-tags">
+          <span class="ac-tag" v-if="a.model">{{ a.model }}</span>
+          <span class="ac-tag">{{ a.skills?.length || 0 }} skills</span>
+          <span class="ac-tag">{{ a.mcpServers?.length || 0 }} MCP</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Detail Modal -->
+  <div class="modal-overlay" v-if="detailItem" @click.self="detailItem=null">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>{{ detailIcon }} {{ detailItem.name }}</h2>
+        <button class="modal-close" @click="detailItem=null">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="detail-row" v-for="(v,k) in detailFields" :key="k">
+          <span class="detail-label">{{ k }}</span>
+          <span class="detail-value">
+            <template v-if="Array.isArray(v)">{{ v.join(', ') || '-' }}</template>
+            <template v-else-if="typeof v==='object'">{{ JSON.stringify(v) }}</template>
+            <template v-else>{{ v || '-' }}</template>
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const { createApp, ref, computed, watch, onMounted, nextTick } = Vue
+
+createApp({
+  setup() {
+    const stats = ref({ skills: {}, mcpServers: {}, commands: {}, agents: {} })
+    const skills = ref([])
+    const mcps = ref([])
+    const commands = ref([])
+    const agents = ref([])
+    const activeTab = ref('overview')
+    const searchQuery = ref('')
+    const searchKind = ref('')
+    const searchResults = ref([])
+    const skillFilter = ref('')
+    const mcpFilter = ref('')
+    const cmdFilter = ref('')
+    const openCats = ref({})
+    const detailItem = ref(null)
+    const skillChart = ref(null)
+    const mcpChart = ref(null)
+    let chartInstances = {}
+
+    const tabs = computed(() => [
+      { key: 'overview', label: '概览', count: '-' },
+      { key: 'skills', label: 'Skills', count: stats.value.skills?.total || 0 },
+      { key: 'mcp', label: 'MCP', count: stats.value.mcpServers?.total || 0 },
+      { key: 'commands', label: 'Commands', count: stats.value.commands?.total || 0 },
+      { key: 'agents', label: 'Agents', count: stats.value.agents?.total || 0 },
+    ])
+
+    const groupedSkills = computed(() => {
+      const g = {}
+      const f = skillFilter.value.toLowerCase()
+      for (const s of skills.value) {
+        if (f && !s.name.toLowerCase().includes(f)) continue
+        const cat = s.category || 'uncategorized'
+        if (!g[cat]) g[cat] = []
+        g[cat].push(s)
+      }
+      return Object.fromEntries(Object.entries(g).sort())
+    })
+
+    const groupedMcp = computed(() => {
+      const g = {}
+      const f = mcpFilter.value.toLowerCase()
+      for (const m of mcps.value) {
+        if (f && !m.name.toLowerCase().includes(f)) continue
+        const grp = m.groups?.length > 0 ? m.groups[0] : 'ungrouped'
+        if (!g[grp]) g[grp] = []
+        g[grp].push(m)
+      }
+      return Object.fromEntries(Object.entries(g).sort())
+    })
+
+    const filteredCommands = computed(() => {
+      const f = cmdFilter.value.toLowerCase()
+      return commands.value.filter(c => !f || c.name.toLowerCase().includes(f))
+    })
+
+    const detailIcon = computed(() => {
+      if (!detailItem.value) return ''
+      return { skill: '📦', mcp: '🔌', command: '⚡', agent: '🤖' }[detailItem.value.kind] || '📄'
+    })
+
+    const detailFields = computed(() => {
+      const d = detailItem.value
+      if (!d) return {}
+      const fields = {
+        'ID': d.id, '版本': d.version, '描述': d.description,
+        '状态': d.enabled ? '✅ 启用' : '❌ 禁用', 'Tag': d.tags,
+      }
+      if (d.kind === 'skill') {
+        fields['分类'] = d.category
+        fields['路径'] = d.filePath
+        fields['大小'] = d.fileSize ? (d.fileSize / 1024).toFixed(1) + ' KB' : '-'
+        fields['范围'] = d.scope
+        fields['校验'] = d.checksum
+        fields['引用文件'] = d.referenceFiles
+      } else if (d.kind === 'mcp') {
+        fields['命令'] = d.command + ' ' + (d.args || []).join(' ')
+        fields['传输'] = d.transport
+        fields['懒加载'] = d.lazyLoad ? '是' : '否'
+        fields['分组'] = d.groups
+        const envStr = d.env ? Object.entries(d.env).map(([k,v]) => k+'=***').join(', ') : '-'
+        fields['环境变量'] = envStr
+        fields['来源'] = d.source
+      } else if (d.kind === 'command') {
+        fields['范围'] = d.scope
+        fields['模板大小'] = d.templateLength + 'B'
+      } else if (d.kind === 'agent') {
+        fields['模型'] = d.model
+        fields['技能'] = d.skills
+        fields['MCP'] = d.mcpServers
+      }
+      return fields
+    })
+
+    async function fetchJSON(url) {
+      const r = await fetch(url)
+      if (!r.ok) throw new Error(await r.text())
+      return r.json()
+    }
+
+    async function loadAll() {
+      stats.value = await fetchJSON('/api/stats')
+      skills.value = await fetchJSON('/api/skills')
+      mcps.value = await fetchJSON('/api/mcp')
+      commands.value = await fetchJSON('/api/commands')
+      agents.value = await fetchJSON('/api/agents')
+      
+      // Expand first category by default
+      const cats = Object.keys(groupedSkills.value)
+      if (cats.length > 0) openCats.value[cats[0]] = true
+      if (cats.length > 1) openCats.value[cats[1]] = true
+    }
+
+    function toggleCat(cat) {
+      openCats.value[cat] = !openCats.value[cat]
+    }
+
+    let searchTimer = null
+    function doSearch() {
+      clearTimeout(searchTimer)
+      searchTimer = setTimeout(async () => {
+        if (!searchQuery.value.trim()) { searchResults.value = []; return }
+        const url = '/api/search?q=' + encodeURIComponent(searchQuery.value) +
+          (searchKind.value ? '&kind=' + searchKind.value : '')
+        searchResults.value = await fetchJSON(url)
+      }, 300)
+    }
+
+    function showDetail(item) { detailItem.value = item }
+
+    function statStyle(idx) {
+      const colors = ['#5b8cff', '#34d399', '#fbbf24', '#f87171']
+      return { borderLeft: `3px solid ${colors[idx]}` }
+    }
+
+    function renderCharts() {
+      nextTick(() => {
+        if (chartInstances.skill) chartInstances.skill.destroy()
+        if (chartInstances.mcp) chartInstances.mcp.destroy()
+
+        const skillCats = stats.value.skills?.categories || {}
+        const mcpGroups = stats.value.mcpServers?.groups || {}
+
+        if (skillChart.value && Object.keys(skillCats).length) {
+          const colors = ['#5b8cff','#34d399','#fbbf24','#f87171','#a78bfa','#f472b6','#2dd4bf','#fb923c','#818cf8','#e879f9']
+          chartInstances.skill = new Chart(skillChart.value, {
+            type: 'doughnut',
+            data: {
+              labels: Object.keys(skillCats),
+              datasets: [{
+                data: Object.values(skillCats),
+                backgroundColor: Object.keys(skillCats).map((_,i) => colors[i % colors.length]),
+                borderWidth: 0
+              }]
+            },
+            options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { position: 'right', labels: { color: '#7a8ba8', font: { size: 11 } } } } }
+          })
+        }
+
+        if (mcpChart.value && Object.keys(mcpGroups).length) {
+          const colors = ['#34d399','#5b8cff','#fbbf24','#f87171','#a78bfa','#f472b6','#2dd4bf','#818cf8']
+          chartInstances.mcp = new Chart(mcpChart.value, {
+            type: 'bar',
+            data: {
+              labels: Object.keys(mcpGroups),
+              datasets: [{
+                data: Object.values(mcpGroups),
+                backgroundColor: Object.keys(mcpGroups).map((_,i) => colors[i % colors.length]),
+                borderRadius: 4,
+              }]
+            },
+            options: {
+              responsive: true, maintainAspectRatio: true,
+              plugins: { legend: { display: false } },
+              scales: {
+                x: { ticks: { color: '#7a8ba8', font: { size: 10 } }, grid: { display: false } },
+                y: { ticks: { color: '#7a8ba8', font: { size: 10 }, stepSize: 1 }, grid: { color: 'rgba(255,255,255,0.04)' } }
+              }
+            }
+          })
+        }
+      })
+    }
+
+    watch(stats, renderCharts, { deep: true })
+
+    onMounted(loadAll)
+
+    return {
+      stats, skills, mcps, commands, agents, activeTab, tabs,
+      searchQuery, searchKind, searchResults, doSearch,
+      skillFilter, mcpFilter, cmdFilter,
+      openCats, toggleCat, groupedSkills, groupedMcp, filteredCommands,
+      detailItem, detailIcon, detailFields, showDetail,
+      skillChart, mcpChart, statStyle
+    }
+  }
+}).mount('#app')
+</script>
+</body>
+</html>
