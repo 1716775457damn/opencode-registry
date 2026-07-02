@@ -96,9 +96,9 @@ program
 
 program
   .command('install')
-  .description('从导出包一键安装到本机（技能+MCP+配置）')
+  .description('从导出包一键安装到本机（多 Agent + 多平台）')
   .argument('<source>', '导出目录路径')
-  .option('--prefix <path>', '安装到自定义目录（默认 ~/.config/opencode）')
+  .option('--agent <agents>', `目标 Agent (逗号分隔): opencode,claude,cursor,codex,windsurf`, 'opencode')
   .option('--dry-run', '预览安装内容，不做实际写入')
   .action(async (source, opts) => {
     await installCommand(source, opts)
@@ -130,8 +130,8 @@ program
 
 program
   .command('sync')
-  .description('同步配置到其他工具 (Claude Code / Cursor / Codex)')
-  .option('--target <tools>', '目标工具 (逗号分隔)', 'cursor,codex')
+  .description('同步配置到多 Agent (OpenCode/Claude/Cursor/Codex/Windsurf)')
+  .option('--agent <agents>', `目标 Agent (逗号分隔): opencode,claude,cursor,codex,windsurf`, 'opencode')
   .action((opts) => {
     const storage = new RegistryStorage()
     syncCommand(storage, opts)

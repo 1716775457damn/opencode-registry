@@ -1,3 +1,5 @@
 export { RegistryStorage } from './storage.js'
 export { Scanner } from './scanner.js'
+export { detectOS, osName, getAgentPaths, generateAgentConfig } from './platform.js'
+export type { AgentType, OSType, AgentPaths } from './platform.js'
 export * from './types.js'
