@@ -14,7 +14,11 @@
     "list": "node dist/cli/index.js list",
     "mcp": "node dist/mcp-server/index.js",
     "start": "node dist/cli/index.js",
-    "dashboard": "node dist/web/server.js"
+    "dashboard": "node dist/web/server.js",
+    "scan-hermes": "OPENCODE_SKILL_DIRS=\"/mnt/d/ai-outputs/opencode-registry/hermes-exclusive/skills:opencode,/mnt/d/ai-outputs/opencode-registry/hermes-exclusive/plugins:opencode\" node dist/cli/index.js scan",
+    "list-hermes": "node dist/cli/index.js list skill --category hermes",
+    "list-hermes-plugins": "node dist/cli/index.js list skill --category hermes-plugin",
+    "list-hermes-mcp": "node dist/cli/index.js list mcp --group hermes"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",

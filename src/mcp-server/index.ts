@@ -118,18 +118,21 @@ function main() {
     return
   }
 
-  import('@modelcontextprotocol/sdk/server/index.js').then(async ({ Server }: any) => {
-    import('@modelcontextprotocol/sdk/server/stdio.js').then(async ({ StdioServerTransport }: any) => {
+  Promise.all([
+    import('@modelcontextprotocol/sdk/server/index.js'),
+    import('@modelcontextprotocol/sdk/server/stdio.js'),
+    import('@modelcontextprotocol/sdk/types.js'),
+  ]).then(async ([{ Server }, { StdioServerTransport }, { ListToolsRequestSchema, CallToolRequestSchema }]: any[]) => {
       const server = new Server(
         { name: 'opencode-registry', version: '0.1.0' },
         { capabilities: { tools: {} } }
       )
 
-      server.setRequestHandler({ method: 'tools/list' } as any, async () => ({
+      server.setRequestHandler(ListToolsRequestSchema, async () => ({
         tools: tools.map(t => ({ name: t.name, description: t.description, inputSchema: t.inputSchema }))
       }))
 
-      server.setRequestHandler({ method: 'tools/call' } as any, async (req: any) => {
+      server.setRequestHandler(CallToolRequestSchema, async (req: any) => {
         const tool = tools.find(t => t.name === req.params.name)
         if (!tool) return { content: [{ type: 'text', text: JSON.stringify({ error: 'unknown tool' }) }] }
         const args = req.params.arguments || {}
@@ -139,10 +142,9 @@ function main() {
 
       const transport = new StdioServerTransport()
       await server.connect(transport)
-    })
   }).catch((e: any) => {
-    if (process.env.DEBUG) console.error('MCP SDK not available')
-    process.exit(0)
+    console.error('opencode-registry MCP server failed to start:', e?.stack || e)
+    process.exit(1)
   })
 }
 
