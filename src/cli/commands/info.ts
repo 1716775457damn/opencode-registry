@@ -9,6 +9,7 @@ export function infoCommand(storage: RegistryStorage, type: string, name: string
   switch (kind) {
     case 'skill': record = storage.getSkill(name); break
     case 'mcp': record = storage.getMCPServer(name); break
+    case 'agent': record = storage.listAgents().find((a: any) => a.name === name); break
     default: console.log(chalk.red(`info 暂不支持 ${type}`)); return
   }
 
@@ -19,7 +20,8 @@ export function infoCommand(storage: RegistryStorage, type: string, name: string
 
   if (opts.json) return console.log(JSON.stringify(record, null, 2))
 
-  console.log(chalk.cyan(`\n${record.kind === 'skill' ? '📦' : '🔌'} ${record.name}`))
+  const icon = record.kind === 'skill' ? '📦' : record.kind === 'mcp' ? '🔌' : '🤖'
+  console.log(chalk.cyan(`\n${icon} ${record.name}`))
   console.log(chalk.dim(`  ID: ${record.id}`))
   console.log(`  描述: ${record.description || '(无)'}`)
   console.log(`  版本: ${record.version}`)
@@ -41,6 +43,10 @@ export function infoCommand(storage: RegistryStorage, type: string, name: string
     console.log(`  分组: ${record.groups.join(', ') || '(无)'}`)
     const envKeys = Object.keys(record.env)
     console.log(`  环境变量: ${envKeys.length > 0 ? envKeys.join(', ') : '(无)'}`)
+  } else if (record.kind === 'agent') {
+    console.log(`  模型: ${record.model || '(无)'}`)
+    console.log(`  Skills: ${record.skills.join(', ') || '(无)'}`)
+    console.log(`  MCP: ${record.mcpServers.join(', ') || '(无)'}`)
   }
   console.log()
 }

@@ -14,6 +14,9 @@ import { installCommand } from './commands/install.js'
 import { checkCommand } from './commands/check.js'
 import { linkCommand } from './commands/link.js'
 import { syncCommand } from './commands/sync.js'
+import { aiContextCommand } from './commands/ai-context.js'
+import { recommendCommand } from './commands/recommend.js'
+import { switchCommand } from './commands/switch.js'
 
 const program = new Command()
 
@@ -81,6 +84,34 @@ program
   .action((opts) => {
     const storage = new RegistryStorage()
     statsCommand(storage, opts)
+    storage.close()
+  })
+
+program
+  .command('ai-context')
+  .description('输出 AI 可直接消费的注册中心上下文快照')
+  .option('-q, --query <query>', '按任务/关键词筛选上下文记录')
+  .option('-t, --type <kind>', '限定类型: skill|mcp|command|agent')
+  .option('-l, --limit <n>', '记录数量上限', '20')
+  .option('-o, --output <path>', '写入 JSON 文件')
+  .option('--no-records', '只输出统计/路径/工具说明，不包含记录列表')
+  .option('--json', 'JSON 格式输出')
+  .action((opts) => {
+    const storage = new RegistryStorage()
+    aiContextCommand(storage, opts)
+    storage.close()
+  })
+
+program
+  .command('recommend')
+  .description('根据自然语言任务推荐可用 Skill/MCP/Agent')
+  .argument('<task>', '任务描述')
+  .option('-t, --type <kind>', '限定类型: skill|mcp|command|agent')
+  .option('-l, --limit <n>', '推荐数量上限', '10')
+  .option('--json', 'JSON 格式输出')
+  .action((task, opts) => {
+    const storage = new RegistryStorage()
+    recommendCommand(storage, task, opts)
     storage.close()
   })
 
@@ -158,6 +189,20 @@ program
   .action((opts) => {
     const storage = new RegistryStorage()
     syncCommand(storage, opts)
+    storage.close()
+  })
+
+program
+  .command('switch')
+  .description('Claude 模型一键切换（类似 CC Switch）')
+  .argument('[model]', '模型名称（如: gpt-5.5, claude-sonnet-4-6, qwen3-64b）')
+  .option('-l, --list', '列出所有可用模型')
+  .option('-c, --current', '查看当前配置')
+  .option('-r, --reset', '重置为默认 Claude 模型')
+  .option('--dry-run', '预览修改，不实际写入文件')
+  .action((model, opts) => {
+    const storage = new RegistryStorage()
+    switchCommand(storage, { model, ...opts })
     storage.close()
   })
 

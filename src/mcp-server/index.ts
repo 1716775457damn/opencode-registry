@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 import { RegistryStorage } from '../core/storage.js'
+import { buildAIContext } from '../core/ai-context.js'
+import type { ItemKind } from '../core/types.js'
 
 interface ToolSchema { type: string; properties: Record<string, any>; required?: string[] }
 interface ToolDef {
@@ -18,6 +20,24 @@ function def(name: string, description: string, props: Record<string, any>, requ
 function str(desc: string, required = false) { return { type: 'string', description: desc } }
 function bool(desc: string) { return { type: 'boolean', description: desc } }
 function num(desc: string) { return { type: 'number', description: desc } }
+function taskTerms(task: string) {
+  const lower = String(task).toLowerCase()
+  const terms = lower.split(/[^a-z0-9\u4e00-\u9fa5_.-]+/).filter((t: string) => t.length >= 2)
+  const aliases: Record<string, string[]> = {
+    '浏览器': ['browser', 'playwright', 'web'],
+    '网页': ['browser', 'web', 'frontend'],
+    '自动化': ['automation', 'automated'],
+    '测试': ['test', 'testing', 'playwright'],
+    '代码审查': ['review', 'code-review', 'github'],
+    '数据库': ['database', 'sql', 'postgres'],
+    '文档': ['document', 'docs', 'markdown'],
+    '部署': ['deploy', 'devops'],
+  }
+  for (const [zh, mapped] of Object.entries(aliases)) {
+    if (lower.includes(zh)) terms.push(...mapped)
+  }
+  return [...new Set(terms)]
+}
 
 function main() {
   const storage = new RegistryStorage()
@@ -31,6 +51,51 @@ function main() {
         return results.slice(0, args.limit || 20).map(r => ({
           kind: r.kind, name: r.name, description: r.description?.slice(0, 100),
           enabled: r.enabled, tags: r.tags
+        }))
+      }),
+
+    def('registry_ai_context', '输出 AI 可直接消费的注册中心上下文快照（统计、路径、推荐调用、匹配记录）',
+      { query: str('按任务/关键词筛选记录'), kind: str('限定类型: skill|mcp|command|agent'), limit: num('返回记录上限'), includeRecords: bool('是否包含记录列表') }, [],
+      (args) => buildAIContext(storage, {
+        query: args.query,
+        kind: args.kind as ItemKind | undefined,
+        limit: args.limit,
+        includeRecords: args.includeRecords !== false,
+      })),
+
+    def('registry_recommend', '根据自然语言任务推荐适合的 Skill/MCP/Agent，并给出下一步 CLI 调用',
+      { task: str('任务描述', true), kind: str('限定类型: skill|mcp|command|agent'), limit: num('返回条数上限') }, ['task'],
+      (args) => {
+        const terms = taskTerms(args.task)
+        const pools = args.kind ? storage.search(args.task, args.kind) : [
+          ...storage.search(args.task),
+          ...storage.listSkills({ enabled: true }),
+          ...storage.listMCPServers({ enabled: true }),
+          ...storage.listAgents(),
+        ]
+        const seen = new Set<string>()
+        const ranked = pools
+          .filter(r => {
+            const key = `${r.kind}:${r.name}`
+            if (seen.has(key)) return false
+            seen.add(key)
+            return true
+          })
+          .map(r => {
+            const hay = `${r.name} ${r.description} ${r.tags.join(' ')}`.toLowerCase()
+            const score = terms.reduce((n, t) => n + (hay.includes(t) ? 1 : 0), 0) + (r.enabled ? 0.25 : 0)
+            return { r, score }
+          })
+          .filter(x => x.score > 0)
+          .sort((a, b) => b.score - a.score || a.r.name.localeCompare(b.r.name))
+          .slice(0, args.limit || 10)
+        return ranked.map(x => ({
+          kind: x.r.kind,
+          name: x.r.name,
+          score: Number(x.score.toFixed(2)),
+          enabled: x.r.enabled,
+          description: x.r.description,
+          next: `oreg info ${x.r.kind} ${x.r.name} --json`,
         }))
       }),
 

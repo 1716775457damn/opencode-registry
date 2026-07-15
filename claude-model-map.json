@@ -1,0 +1,73 @@
+{
+  "version": 1,
+  "default": {
+    "model": "claude-sonnet-4-6",
+    "env": {
+      "ANTHROPIC_BASE_URL": "http://127.0.0.1:8327/v1",
+      "ANTHROPIC_API_KEY": "sk-test-key"
+    },
+    "maxTokens": 8192,
+    "permissions": {
+      "allow": ["Bash", "Edit", "Read", "Write", "Glob", "Grep"]
+    }
+  },
+  "sourceModelMap": {
+    "gpt-5.5": {
+      "model": "gpt-5.5",
+      "env": {
+        "ANTHROPIC_BASE_URL": "http://127.0.0.1:8327/v1",
+        "ANTHROPIC_API_KEY": "sk-test-key"
+      },
+      "maxTokens": 8192,
+      "permissions": {
+        "allow": ["Bash", "Edit", "Read", "Write", "Glob", "Grep"]
+      },
+      "description": "OpenAI GPT-5.5 (Quanthatch 中转)"
+    },
+    "gpt-4.5-preview": {
+      "model": "gpt-4.5-preview",
+      "env": {
+        "ANTHROPIC_BASE_URL": "http://127.0.0.1:8327/v1",
+        "ANTHROPIC_API_KEY": "sk-test-key"
+      },
+      "maxTokens": 8192,
+      "permissions": {
+        "allow": ["Bash", "Edit", "Read", "Write", "Glob", "Grep"]
+      },
+      "description": "OpenAI GPT-4.5 Preview"
+    },
+    "qwen3-64b": {
+      "model": "qwen3-64b",
+      "env": {
+        "ANTHROPIC_BASE_URL": "http://127.0.0.1:8327/v1",
+        "ANTHROPIC_API_KEY": "sk-test-key"
+      },
+      "maxTokens": 8192,
+      "permissions": {
+        "allow": ["Bash", "Edit", "Read", "Write", "Glob", "Grep"]
+      },
+      "description": "通义千问 Qwen3 64B"
+    },
+    "deepseek-v3": {
+      "model": "deepseek-v3",
+      "env": {
+        "ANTHROPIC_BASE_URL": "http://127.0.0.1:8327/v1",
+        "ANTHROPIC_API_KEY": "sk-test-key"
+      },
+      "maxTokens": 8192,
+      "permissions": {
+        "allow": ["Bash", "Edit", "Read", "Write", "Glob", "Grep"]
+      },
+      "description": "DeepSeek V3"
+    },
+    "opencode/deepseek-v4-flash-free": {
+      "model": "claude-sonnet-4-6"
+    },
+    "quanthatch/gpt-5.4": {
+      "model": "claude-sonnet-4-6"
+    },
+    "grok-4.5": {
+      "model": "claude-sonnet-4-6"
+    }
+  }
+}

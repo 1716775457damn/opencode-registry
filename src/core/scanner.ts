@@ -196,6 +196,29 @@ export class Scanner {
       const r = this.storage.upsertAgent(record)
       if (r.action === 'created') newC++; else updC++
     }
+
+    const topLevelModel = typeof config.model === 'string' ? config.model : ''
+    const topLevelSkills = Array.isArray(config.skills?.paths) ? config.skills.paths : []
+    const topLevelMcpServers = Object.entries(config.mcp || {})
+      .filter(([, cfg]) => (cfg as any)?.enabled !== false)
+      .map(([name]) => name)
+
+    if (topLevelModel || topLevelSkills.length > 0 || topLevelMcpServers.length > 0) {
+      const record: AgentRecord = {
+        kind: 'agent', id: 'agent_opencode_runtime', name: 'opencode-runtime', version: '1.0.0',
+        description: 'Derived runtime profile from top-level OpenCode config',
+        tags: ['runtime', 'opencode'],
+        model: topLevelModel,
+        skills: topLevelSkills,
+        mcpServers: topLevelMcpServers,
+        enabled: true,
+        source: 'local',
+        createdAt: '', updatedAt: ''
+      }
+      const r = this.storage.upsertAgent(record)
+      if (r.action === 'created') newC++; else updC++
+    }
+
     return { new: newC, updated: updC }
   }
 

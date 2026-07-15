@@ -8,6 +8,7 @@ export type AgentType = 'opencode' | 'claude' | 'cursor' | 'codex' | 'windsurf'
 export interface AgentPaths {
   configDir: string
   configFile: string
+  extraConfigFiles?: string[]
   skillDir: string
   mcpSection: string
   configFormat: 'json' | 'toml'
@@ -62,6 +63,7 @@ export function getAgentPaths(agent: AgentType, osType?: OSType): AgentPaths {
       return {
         configDir: path.join(configRoot, 'opencode'),
         configFile: path.join(configRoot, 'opencode', 'opencode.json'),
+        extraConfigFiles: [path.join(configRoot, 'opencode', 'config.json')],
         skillDir: path.join(configRoot, 'opencode', 'skills'),
         mcpSection: 'mcp',
         configFormat: 'json',
@@ -72,6 +74,9 @@ export function getAgentPaths(agent: AgentType, osType?: OSType): AgentPaths {
       return {
         configDir: path.join(home, '.claude'),
         configFile: path.join(home, '.claude', isWin ? 'settings.json' : 'claude_settings.json'),
+        extraConfigFiles: isWin
+          ? []
+          : [path.join(home, '.claude', 'settings.json'), path.join(home, '.claude', 'claude_settings.json')],
         skillDir: path.join(home, '.claude', 'skills'),
         mcpSection: 'mcpServers',
         configFormat: 'json',

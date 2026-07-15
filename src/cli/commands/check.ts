@@ -22,6 +22,9 @@ export function checkCommand(storage: RegistryStorage) {
   const mcpConflicts = checkMCPConflicts(storage)
   if (mcpConflicts.length > 0) hasIssues = true
 
+  const badMcp = checkBrokenMCPConfigs(storage)
+  if (badMcp.length > 0) hasIssues = true
+
   const drift = checkConfigDrift(storage)
   if (drift.length > 0) hasIssues = true
 
@@ -116,6 +119,27 @@ function checkMCPConflicts(storage: RegistryStorage): string[] {
     console.log(chalk.green(`  ✔ MCP 服务器: ${mcps.length} 个，无端口冲突`))
   }
   return conflictsFound
+}
+
+function checkBrokenMCPConfigs(storage: RegistryStorage): string[] {
+  const mcps = storage.listMCPServers()
+  const broken: string[] = []
+  for (const m of mcps) {
+    const cmd = (m.command || '').trim()
+    const args = m.args || []
+    const launcherOnly = cmd === 'npx' && args.length === 0
+    const pythonOnly = (cmd === 'python3' || cmd === 'python') && args.length === 0
+    const emptyCmd = !cmd
+    const lazyPlaceholder = cmd.includes('lazy-mcp')
+    if (emptyCmd || launcherOnly || pythonOnly || lazyPlaceholder) {
+      broken.push(m.name)
+      console.log(chalk.yellow(`  ⚠  MCP 配置可疑: ${m.name} → command=${cmd || '(empty)'} args=${args.join(' ') || '(none)'}`))
+    }
+  }
+  if (broken.length === 0) {
+    console.log(chalk.green('  ✔ MCP 配置形状: 无空 command / launcher-only / lazy placeholder'))
+  }
+  return broken
 }
 
 function checkConfigDrift(storage: RegistryStorage): string[] {
